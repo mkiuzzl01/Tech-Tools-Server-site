@@ -1,7 +1,7 @@
 const express = require('express');
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express();
 const cors = require('cors');
 const port = process.env.PORT || 5000;
@@ -46,6 +46,7 @@ async function run() {
     await client.connect();
 
     const allUsersCollection = client.db("Tech-Tools").collection("All_Users");
+    const productsCollection = client.db("Tech-Tools").collection("All_Products");
     //token Generate
     app.post("/jwt", async (req, res) => {
         const user = req.body;
@@ -54,6 +55,14 @@ async function run() {
         });
         res.send({ token });
       });
+
+      //Get Related API
+      app.get('/products/:email', async (req,res)=>{
+        const email = req.params.email;
+        const query = {ownerEmail:email};
+        const result = await productsCollection.find(query).toArray();
+        res.send(result);
+      })
 
       //save to database all visited users
       app.post("/users", async (req, res) => {
@@ -67,7 +76,19 @@ async function run() {
         res.send(result);
       });
 
-
+      //save to product from users
+      app.post('/products',async(req,res)=>{
+        const productInfo = req.body;
+        const result = await productsCollection.insertOne(productInfo);
+        res.send(result);
+      })
+      //Delete Related API
+      app.delete('/product-delete/:id',async(req,res)=>{
+        const id = req.params.id;
+        const query = {_id: new ObjectId(id)};
+        const result = await productsCollection.deleteOne(query);
+        res.send(result);
+      })
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
