@@ -14,7 +14,7 @@ app.use(express.json());
 
 //Token Verify
 const verifyToken = (req, res, next) => {
-    // console.log(req.headers.authorization);
+    console.log(req.headers.authorization);
     if (!req.headers.authorization) {
       return res.status(401).send({ message: "unauthorize access" });
     }
@@ -70,6 +70,13 @@ async function run() {
         res.send(result);
       })
 
+
+      app.get('/Product-Details/:id',verifyToken, async (req,res)=>{
+        const id = req.params.id;
+        const query = {_id: new ObjectId(id)};
+        const result = await productsCollection.findOne(query);
+        res.send(result);
+      })
 
       app.get('/products/:email', async (req,res)=>{
         const email = req.params.email;
