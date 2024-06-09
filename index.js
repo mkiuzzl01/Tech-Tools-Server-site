@@ -56,7 +56,15 @@ async function run() {
         res.send({ token });
       });
 
+
+
       //Get Related API
+      app.get('/Featured-Products',async(req,res)=>{
+        const result = await productsCollection.find().sort({ dateTime: -1 }).limit(4).toArray();
+        res.send(result);
+      })
+
+
       app.get('/products/:email', async (req,res)=>{
         const email = req.params.email;
         const query = {ownerEmail:email};
