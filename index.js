@@ -65,6 +65,12 @@ async function run() {
       })
 
 
+      app.get('/Trending-Products',async(req,res)=>{
+        const result = await productsCollection.find().sort({ vote: -1 }).limit(6).toArray();
+        res.send(result);
+      })
+
+
       app.get('/products/:email', async (req,res)=>{
         const email = req.params.email;
         const query = {ownerEmail:email};
