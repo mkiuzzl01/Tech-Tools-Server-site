@@ -83,7 +83,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/products/:email", async (req, res) => {
+    app.get("/products/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
       const query = { ownerEmail: email };
       const result = await productsCollection.find(query).toArray();
@@ -110,6 +110,11 @@ async function run() {
       res.send(result);
     })
 
+    app.get('/product-review', verifyToken, async(req,res)=>{
+      const result = await reportedCollection.find().toArray();
+      res.send(result);
+    })
+
     //=============== Post Related Api =======================
     //save to database all visited users
     app.post("/users", async (req, res) => {
@@ -124,7 +129,7 @@ async function run() {
     });
 
     //save to product from users
-    app.post("/products", async (req, res) => {
+    app.post("/products", verifyToken, async (req, res) => {
       const productInfo = req.body;
       const result = await productsCollection.insertOne(productInfo);
       res.send(result);
@@ -145,7 +150,7 @@ async function run() {
     });
 
     //Update Related API
-    app.patch("/update-product/:id", async (req, res) => {
+    app.patch("/update-product/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const info = req.body;
       const query = { _id: new ObjectId(id) };
