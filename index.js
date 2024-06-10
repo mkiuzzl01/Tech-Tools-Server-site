@@ -14,7 +14,7 @@ app.use(express.json());
 
 //Token Verify
 const verifyToken = (req, res, next) => {
-    console.log(req.headers.authorization);
+    // console.log(req.headers.authorization);
     if (!req.headers.authorization) {
       return res.status(401).send({ message: "unauthorize access" });
     }
@@ -47,6 +47,8 @@ async function run() {
 
     const allUsersCollection = client.db("Tech-Tools").collection("All_Users");
     const productsCollection = client.db("Tech-Tools").collection("All_Products");
+    const reviewCollection = client.db("Tech-Tools").collection("Reviews");
+    const reportedCollection = client.db("Tech-Tools").collection("Reports");
     //token Generate
     app.post("/jwt", async (req, res) => {
         const user = req.body;
@@ -85,6 +87,20 @@ async function run() {
         res.send(result);
       })
 
+      app.get('/product-review/:email',async (req,res)=>{
+        const email = req.params.email;
+        const query = {reviewerEmail:email};
+        const result = await reviewCollection.find(query).toArray();
+        res.send(result);
+      })
+      app.get('/product-report/:email',async (req,res)=>{
+        const email = req.params.email;
+        const query = {reporterEmail:email};
+        const result = await reportedCollection.find(query).toArray();
+        res.send(result);
+      })
+      
+      //=============== Post Related Api =======================
       //save to database all visited users
       app.post("/users", async (req, res) => {
         const info = req.body;
@@ -101,6 +117,20 @@ async function run() {
       app.post('/products',async(req,res)=>{
         const productInfo = req.body;
         const result = await productsCollection.insertOne(productInfo);
+        res.send(result);
+      })
+
+      //Post All Review Products
+      app.post('/product-review',async (req,res)=>{
+        const review = req.body;
+        const result = await reviewCollection.insertOne(review);
+        res.send(result);
+      })
+
+      //Post All Reported Product
+      app.post('/reported-products',async (req,res)=>{
+        const info = req.body;
+        const result = await reportedCollection.insertOne(info);
         res.send(result);
       })
 
