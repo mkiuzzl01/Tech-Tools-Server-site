@@ -57,6 +57,24 @@ async function run() {
       res.send({ token });
     });
 
+    //=============user related api==================
+    app.get('/user/:email', async (req,res)=>{
+      const email = req.params.email;
+      const query = {email};
+      const result = await allUsersCollection.findOne(query);
+      res.send(result);
+    })
+
+    app.patch('/user-subscription/:id',async (req,res)=>{
+      const id = req.params.id;
+      const info = req.body;
+      const query = {_id: new ObjectId(id)};
+      const options = {upsert:true};
+      const subscription = {$set:{...info}};
+      const result = await allUsersCollection.updateOne(query,subscription,options);
+      res.send(result);
+    })
+
     //Get Related API
     app.get("/Featured-Products", async (req, res) => {
       const result = await productsCollection
@@ -198,6 +216,7 @@ async function run() {
       const result = await productsCollection.deleteOne(query);
       res.send(result);
     });
+
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
