@@ -58,24 +58,62 @@ async function run() {
     });
 
     //=============user related api==================
-    app.get('/user/:email', async (req,res)=>{
+    app.get("/user/:email", async (req, res) => {
       const email = req.params.email;
-      const query = {email};
+      const query = { email };
       const result = await allUsersCollection.findOne(query);
       res.send(result);
-    })
+    });
 
-    app.patch('/user-subscription/:id',async (req,res)=>{
+    //save to database all visited users
+    app.post("/users", async (req, res) => {
+      const info = req.body;
+      const query = { email: info.email };
+      const existingUser = await allUsersCollection.findOne(query);
+      if (existingUser) {
+        return res.send({ message: "User Already Exits", insertedId: null });
+      }
+      const result = await allUsersCollection.insertOne(info);
+      res.send(result);
+    });
+
+    app.patch("/user-subscription/:id", async (req, res) => {
       const id = req.params.id;
       const info = req.body;
-      const query = {_id: new ObjectId(id)};
-      const options = {upsert:true};
-      const subscription = {$set:{...info}};
-      const result = await allUsersCollection.updateOne(query,subscription,options);
+      const query = { _id: new ObjectId(id) };
+      const options = { upsert: true };
+      const subscription = { $set: { ...info } };
+      const result = await allUsersCollection.updateOne(
+        query,
+        subscription,
+        options
+      );
       res.send(result);
-    })
+    });
 
     //Get Related API
+    app.get("/Review-Queue", async (req, res) => {
+      const result = await productsCollection
+        .aggregate([
+          {
+            $addFields: {
+              sortOrder: {
+                $cond: {
+                  if: { $eq: ["$status", "pending"] },
+                  then: 1,
+                  else: 2,
+                },
+              },
+            },
+          },
+          { $sort: { sortOrder: 1 } },
+          { $project: { sortOrder: 0 } }, // Remove the sortOrder field from the result
+        ])
+        .toArray();
+
+      res.send(result);
+    });
+
     app.get("/Featured-Products", async (req, res) => {
       const result = await productsCollection
         .find()
@@ -110,7 +148,7 @@ async function run() {
       const search = req.query.search;
       let query = {};
       if (search) {
-        query = {productTags:{ $regex: search, $options: "i" } };
+        query = { productTags: { $regex: search, $options: "i" } };
       }
       const result = await productsCollection
         .find(query)
@@ -119,7 +157,6 @@ async function run() {
         .toArray();
       res.send(result);
     });
-
 
     app.get("/Product-Details/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
@@ -141,6 +178,7 @@ async function run() {
       const result = await reviewCollection.find(query).toArray();
       res.send(result);
     });
+
     app.get("/product-report/:email", async (req, res) => {
       const email = req.params.email;
       const query = { reporterEmail: email };
@@ -148,30 +186,26 @@ async function run() {
       res.send(result);
     });
 
-    app.get('/existing-voter/:email', verifyToken,async(req,res)=>{
+    app.get("/existing-voter/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
-      const query = {voter:email};
+      const query = { voter: email };
       const result = await productsCollection.find(query).toArray();
       res.send(result);
-    })
+    });
 
-    app.get('/product-review', verifyToken, async(req,res)=>{
-      const result = await reportedCollection.find().toArray();
-      res.send(result);
-    })
-
-    //=============== Post Related Api =======================
-    //save to database all visited users
-    app.post("/users", async (req, res) => {
-      const info = req.body;
-      const query = { email: info.email };
-      const existingUser = await allUsersCollection.findOne(query);
-      if (existingUser) {
-        return res.send({ message: "User Already Exits", insertedId: null });
-      }
-      const result = await allUsersCollection.insertOne(info);
+    app.get("/review-products/:id", verifyToken, async (req, res) => {
+      const id = req.params.id;
+      const query = { "product._id": id };
+      const result = await reviewCollection.find(query).toArray();
       res.send(result);
     });
+
+    app.get("/reported-products", async (req, res) => {
+      const result = await reportedCollection.find().toArray();
+      res.send(result);
+    });
+
+    //=============== Post Related Api =======================
 
     //save to product from users
     app.post("/products", verifyToken, async (req, res) => {
@@ -183,15 +217,79 @@ async function run() {
     //Post All Review Products
     app.post("/product-review", async (req, res) => {
       const review = req.body;
-      const result = await reviewCollection.insertOne(review);
-      res.send(result);
+      const query = { "product._id": review.product._id };
+      try {
+        const existingReviewer = await reviewCollection.findOne(query);
+        if (existingReviewer) {
+         
+          const update = {
+            $addToSet: {
+              reviewer: {
+                reviewerName: review.reviewerName,
+                email: review.reviewerEmail,
+                reviewerImage: review.reviewerImage,
+              },
+            },
+          };
+
+          await reviewCollection.updateOne(query, update);
+          return res.send("Report updated with new reporter");
+        } else {
+          const newReview = {
+            product: review.product,
+            reviewer: [
+              {
+                reviewerName: review.reviewerName,
+                email: review.reviewerEmail,
+                reviewerImage: review.reviewerImage,
+              },
+            ],
+          };
+
+          const result = await reviewCollection.insertOne(newReview);
+          return res.send(result);
+        }
+      } catch (error) {
+        console.error("Error reporting product:", error);
+      }
     });
 
     //Post All Reported Product
     app.post("/reported-products", async (req, res) => {
       const info = req.body;
-      const result = await reportedCollection.insertOne(info);
-      res.send(result);
+      const query = { "product._id": info.product._id };
+      try {
+        const existingReport = await reportedCollection.findOne(query);
+        if (existingReport) {
+         
+          const update = {
+            $addToSet: {
+              reporters: {
+                email: info.reporterEmail,
+                report: info.report,
+              },
+            },
+          };
+
+          await reportedCollection.updateOne(query, update);
+          return res.send("Report updated with new reporter");
+        } else {
+          const newReport = {
+            product: info.product,
+            reporters: [
+              {
+                email: info.reporterEmail,
+                comment: info.comment,
+              },
+            ],
+          };
+
+          const result = await reportedCollection.insertOne(newReport);
+          return res.send(result);
+        }
+      } catch (error) {
+        console.error("Error reporting product:", error);
+      }
     });
 
     //Update Related API
@@ -216,7 +314,6 @@ async function run() {
       const result = await productsCollection.deleteOne(query);
       res.send(result);
     });
-
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
