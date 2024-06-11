@@ -76,6 +76,33 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/products-count", async (req, res) => {
+      const search = req.query.search;
+      let query = {};
+      if (search) {
+        query = { expertise: { $regex: search, $options: "i" } };
+      }
+      const numbers = await productsCollection.countDocuments(query);
+      res.send({ numbers });
+    });
+
+    app.get("/products", async (req, res) => {
+      const size = parseInt(req.query.size);
+      const page = parseInt(req.query.page) - 1;
+      const search = req.query.search;
+      let query = {};
+      if (search) {
+        query = {productTags:{ $regex: search, $options: "i" } };
+      }
+      const result = await productsCollection
+        .find(query)
+        .skip(page * size)
+        .limit(size)
+        .toArray();
+      res.send(result);
+    });
+
+
     app.get("/Product-Details/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
