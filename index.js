@@ -1,13 +1,22 @@
 const express = require("express");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
+const stripe = require("stripe")(process.env.PAYMENT_SECRET);
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
 const cors = require("cors");
 const port = process.env.PORT || 5000;
 
 // middleware
-app.use(cors());
+app.use(cors(
+  {
+    origin: [
+      "http://localhost:5173",
+      "tech-tools-f4a05.web.app",
+      "tech-tools-f4a05.firebaseapp.com"
+    ]
+  }
+));
 app.use(express.json());
 
 //Token Verify
@@ -40,7 +49,7 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
 
     const allUsersCollection = client.db("Tech-Tools").collection("All_Users");
     const productsCollection = client
@@ -201,8 +210,8 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/review-products/:id", verifyToken, async (req, res) => {
-      const id = req.params.id;
+    app.get("/review-products/:id", async (req, res) => {
+      const id = req.params.id;   
       const query = { "product._id": id };
       const result = await reviewCollection.find(query).toArray();
       res.send(result);
@@ -244,7 +253,7 @@ async function run() {
         }
 
         const existingProductReview = await reviewCollection.findOne(query);
-        console.log(existingProductReview);
+        // console.log(existingProductReview);
         if (existingProductReview) {
           const update = {
             $addToSet: {
@@ -278,7 +287,7 @@ async function run() {
           return res.send(result);
         }
       } catch (error) {
-        console.error("Error reviewing product:", error);
+        // console.error("Error reviewing product:", error);
         res.status(500).send("Internal Server Error");
       }
     });
@@ -334,7 +343,7 @@ async function run() {
           return res.send(result);
         }
       } catch (error) {
-        console.error("Error reporting product:", error);
+        // console.error("Error reporting product:", error);
         res.status(500).send("Internal server error");
       }
     });
@@ -378,7 +387,7 @@ async function run() {
         const result = await productsCollection.updateOne(query, update);
         res.send(result);
       } catch (error) {
-        console.error("Error updating vote:", error);
+        // console.error("Error updating vote:", error);
         res.status(500).send("An error occurred while updating the vote");
       }
     });
@@ -413,8 +422,25 @@ async function run() {
       );
     });
 
+    //==========================Payment================================
+
+    app.post("/payment-intent", async (req, res) => {
+      const { cost } = req.body;
+      // return console.log(cost);
+      const amount = parseInt(cost * 100);
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ["card"],
+      });
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
+    });
+
+
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
