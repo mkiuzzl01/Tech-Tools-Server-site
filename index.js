@@ -142,7 +142,8 @@ async function run() {
       res.send({ numbers });
     });
 
-    app.get("/products", async (req, res) => {
+    //search product by using product tags 
+    app.get("/products-search", async (req, res) => {
       const size = parseInt(req.query.size);
       const page = parseInt(req.query.page) - 1;
       const search = req.query.search;
@@ -150,12 +151,13 @@ async function run() {
       if (search) {
         query = { productTags: { $regex: search, $options: "i" } };
       }
-      const result = await productsCollection
+      const totalDocuments = await productsCollection.countDocuments(query);
+      const products = await productsCollection
         .find(query)
         .skip(page * size)
         .limit(size)
         .toArray();
-      res.send(result);
+      res.send({ data: products, totalDocuments });
     });
 
     app.get("/Product-Details/:id", verifyToken, async (req, res) => {
@@ -309,7 +311,7 @@ async function run() {
     app.patch("/upVote/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const info = req.body;
-      console.log(id,info);
+      console.log(id, info);
       const query = { _id: new ObjectId(id) };
       try {
         const find = await productsCollection.findOne(query);
