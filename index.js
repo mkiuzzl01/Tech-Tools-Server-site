@@ -142,7 +142,7 @@ async function run() {
       res.send({ numbers });
     });
 
-    //search product by using product tags 
+    //search product by using product tags
     app.get("/products-search", async (req, res) => {
       const size = parseInt(req.query.size);
       const page = parseInt(req.query.page) - 1;
@@ -221,20 +221,39 @@ async function run() {
       const review = req.body;
       const query = { "product._id": review.product._id };
       try {
-        const existingReviewer = await reviewCollection.findOne(query);
+        if (review.product.ownerEmail === review.reviewerEmail) {
+          return res
+            .status(400)
+            .send("Product owner cannot review their own product");
+        }
+        const existingReviewer = await reviewCollection.findOne({
+          ...query,
+          "reviewer.email": review.reviewerEmail,
+        });
+
         if (existingReviewer) {
+          return res
+            .status(400)
+            .send("Reviewer has already reviewed this product");
+        }
+
+        const existingProductReview = await reviewCollection.findOne(query);
+        console.log(existingProductReview);
+        if (existingProductReview) {
           const update = {
             $addToSet: {
               reviewer: {
                 reviewerName: review.reviewerName,
                 email: review.reviewerEmail,
                 reviewerImage: review.reviewerImage,
+                reviewDescription: review.reviewDescription,
+                productRating: review.productRating,
               },
             },
           };
 
           await reviewCollection.updateOne(query, update);
-          return res.send("Report updated with new reporter");
+          return res.send("Review updated with new reviewer");
         } else {
           const newReview = {
             product: review.product,
@@ -243,6 +262,8 @@ async function run() {
                 reviewerName: review.reviewerName,
                 email: review.reviewerEmail,
                 reviewerImage: review.reviewerImage,
+                reviewDescription: review.reviewDescription,
+                productRating: review.productRating,
               },
             ],
           };
@@ -251,28 +272,47 @@ async function run() {
           return res.send(result);
         }
       } catch (error) {
-        console.error("Error reporting product:", error);
+        console.error("Error reviewing product:", error);
+        res.status(500).send("Internal Server Error");
       }
     });
 
     //Post All Reported Product
-    app.post("/reported-products", async (req, res) => {
+    app.post("/reported-products", verifyToken, async (req, res) => {
       const info = req.body;
+
       const query = { "product._id": info.product._id };
+
       try {
+        if (info.product.ownerEmail === info.reporterEmail) {
+          return res
+            .status(400)
+            .send("Product owner cannot review their own product");
+        }
+
+        const existingReporter = await reportedCollection.findOne({
+          ...query,
+          "reporters.email": info.reporterEmail,
+        });
+        if (existingReporter) {
+          return res
+            .status(400)
+            .send("Reporter has already reported this product");
+        }
+
         const existingReport = await reportedCollection.findOne(query);
         if (existingReport) {
           const update = {
             $addToSet: {
               reporters: {
                 email: info.reporterEmail,
-                report: info.report,
+                comment: info.comment,
               },
             },
           };
 
-          await reportedCollection.updateOne(query, update);
-          return res.send("Report updated with new reporter");
+          const result = await reportedCollection.updateOne(query, update);
+          return res.send(result);
         } else {
           const newReport = {
             product: info.product,
@@ -289,6 +329,7 @@ async function run() {
         }
       } catch (error) {
         console.error("Error reporting product:", error);
+        res.status(500).send("Internal server error");
       }
     });
 
@@ -311,12 +352,12 @@ async function run() {
     app.patch("/upVote/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const info = req.body;
-      console.log(id, info);
+      // console.log(id, info);
       const query = { _id: new ObjectId(id) };
       try {
         const find = await productsCollection.findOne(query);
         if (find.ownerEmail === info.voter) {
-          return res.status(40).send("You cannot vote on your own product");
+          return res.status(400).send("You cannot vote on your own product");
         }
 
         if (find.voter) {
