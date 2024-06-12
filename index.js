@@ -221,7 +221,6 @@ async function run() {
       try {
         const existingReviewer = await reviewCollection.findOne(query);
         if (existingReviewer) {
-         
           const update = {
             $addToSet: {
               reviewer: {
@@ -261,7 +260,6 @@ async function run() {
       try {
         const existingReport = await reportedCollection.findOne(query);
         if (existingReport) {
-         
           const update = {
             $addToSet: {
               reporters: {
@@ -305,6 +303,35 @@ async function run() {
       };
       const result = await productsCollection.updateOne(query, update, options);
       res.send(result);
+    });
+
+    //upto vote related api
+    app.patch("/upVote/:id", verifyToken, async (req, res) => {
+      const id = req.params.id;
+      const info = req.body;
+      console.log(id,info);
+      const query = { _id: new ObjectId(id) };
+      try {
+        const find = await productsCollection.findOne(query);
+        if (find.ownerEmail === info.voter) {
+          return res.status(40).send("You cannot vote on your own product");
+        }
+
+        if (find.voter) {
+          return res.status(400).send("You have already voted on this product");
+        }
+
+        const update = {
+          $inc: { vote: 1 },
+          $addToSet: { voter: info.voter },
+        };
+
+        const result = await productsCollection.updateOne(query, update);
+        res.send(result);
+      } catch (error) {
+        console.error("Error updating vote:", error);
+        res.status(500).send("An error occurred while updating the vote");
+      }
     });
 
     //Delete Related API
