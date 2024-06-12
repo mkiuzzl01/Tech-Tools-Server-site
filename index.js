@@ -58,6 +58,12 @@ async function run() {
     });
 
     //=============user related api==================
+
+    app.get("/users", async (req, res) => {
+      const result = await allUsersCollection.find().toArray();
+      res.send(result);
+    });
+
     app.get("/user/:email", async (req, res) => {
       const email = req.params.email;
       const query = { email };
@@ -90,11 +96,6 @@ async function run() {
       );
       res.send(result);
     });
-    
-    app.get('/users',async(req,res)=>{
-      const result = await allUsersCollection.find().toArray();
-      res.send(result);
-    })
 
     //Get Related API
     app.get("/Review-Queue", async (req, res) => {
@@ -389,17 +390,28 @@ async function run() {
       const result = await productsCollection.deleteOne(query);
       res.send(result);
     });
-    
+
     app.delete("/reported-product-delete/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
-      const filter = {"product._id":id};
+      const filter = { "product._id": id };
       const result = await productsCollection.deleteOne(query);
       const remove = await reportedCollection.deleteOne(filter);
-      res.send('productsList:',result,'reportedList:',remove);
+      res.send("productsList:", result, "reportedList:", remove);
     });
-    
-    
+
+    //========================Admin Statistics ====================
+    app.get("/Admin-Statistics", async (req, res) => {
+      const users = await allUsersCollection.estimatedDocumentCount();
+      const products = await productsCollection.estimatedDocumentCount();
+      const reviews = await reportedCollection.estimatedDocumentCount();
+
+      res.send(
+        [{ name: "users", value: users },
+        { name: "products", value: products },
+        { name: "reviews", value: reviews }]
+      );
+    });
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
