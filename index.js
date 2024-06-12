@@ -90,6 +90,11 @@ async function run() {
       );
       res.send(result);
     });
+    
+    app.get('/users',async(req,res)=>{
+      const result = await allUsersCollection.find().toArray();
+      res.send(result);
+    })
 
     //Get Related API
     app.get("/Review-Queue", async (req, res) => {
@@ -384,6 +389,17 @@ async function run() {
       const result = await productsCollection.deleteOne(query);
       res.send(result);
     });
+    
+    app.delete("/reported-product-delete/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const filter = {"product._id":id};
+      const result = await productsCollection.deleteOne(query);
+      const remove = await reportedCollection.deleteOne(filter);
+      res.send('productsList:',result,'reportedList:',remove);
+    });
+    
+    
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
