@@ -2,32 +2,8 @@
 
 ## Overview:
 
-=> User Product Posting:
-    Users can post tech products.
-    They have the ability to modify product information after posting.
-
-=> Customer Product Viewing:
-    Customers can browse all products.
-    Featured and trending products are prominently displayed on the homepage.
-
-=> Customer Interaction:
-    Customers can engage by voting for products.
-    They can leave reviews and report specific products for review.
-
-=> Dashboard with Roles:
-    The website includes a comprehensive dashboard with three distinct roles: user, moderator, and admin.
-
-=> Moderator Actions:
-    Moderators review newly posted products.
-    They also handle reported products and customer reviews, taking appropriate actions based on feedback.
-
-=> Admin Controls:
-    Admins oversee site-wide activities, including monitoring all visitor traffic.
-    They have the authority to manage user roles analyze detailed statistics of products and review data, often presented using pie charts.
-
-=> Account Verification:
-    Users can verify their accounts permanently.
-    This process typically involves making a payment through their user profile, ensuring authenticated access and user accountability.
+The website is a product discovery platform where users can find, share, and discuss new products, services, and technologies.
+It primarily focuses on startups and innovative tech products, allowing creators to launch their products, and users to upvote, review, and engage with those products.
 
 ## Features of This Website:
 1. Product Posting: Users can post and modify tech products.
